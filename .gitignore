@@ -1,0 +1,4 @@
+conf/config.py
+data/**.csv
+**__pycache__
+.DS_Store
