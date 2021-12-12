@@ -41,7 +41,7 @@ class OrbisMatchAPIQueryClient():
         spark_df = self.spark_session.read.parquet(path_to_data)
 
         return spark_df
-    
+
 
     def load_data_spark_csv(self, path_to_data: str) -> pyspark.sql.DataFrame:
         """
@@ -58,6 +58,40 @@ class OrbisMatchAPIQueryClient():
         return spark_df
 
 
+    def write_data_spark_parquet(self, spark_df: pyspark.sql.DataFrame, path_to_write: str, mode: str = "append") -> None:
+        """
+        Method to write Spark DataFrame to a given path in parquet format
+        Args:
+            spark_df: Spark DataFrame
+            path_to_write: path to write the parquet file (e.g., 's3://bucket/data.parquet')
+            mode: write mode (defaults to 'append')
+        Returns:
+            None
+        """
+
+        # Write Spark DataFrame to 'path_to_write' location in parquet format
+        spark_df.write.mode(mode).parquet(path_to_write)
+
+        return None
+
+
+    def write_data_pandas_csv(self, pandas_df: pd.DataFrame, path_to_write: str, mode: str = "a") -> None:
+        """
+        Method to write Pandas DataFrame to a given path in csv format
+        Args:
+            pandas_df: Pandas DataFrame
+            path_to_write: path to write the parquet file (e.g., 's3://bucket/data.parquet')
+            mode: write mode (defaults to 'a' for append, 'w' for overwrite)
+        Returns:
+            None
+        """
+
+        # Write Pandas DataFrame to 'path_to_write' location in parquet format
+        pandas_df.to_csv(path_to_write, mode=mode, index=False)
+
+        return None
+
+
     def convert_spark_to_pandas(self, spark_df: pyspark.sql.DataFrame) -> pd.DataFrame:
         """
         Method to convert a Spark DataFrame to a Pandas DataFrame
@@ -71,6 +105,25 @@ class OrbisMatchAPIQueryClient():
         pandas_df = spark_df.toPandas()
 
         return pandas_df
+    
+
+    def convert_pandas_to_spark(self, pandas_df: pd.DataFrame, schema: pyspark.sql.types.StructType = None) -> pyspark.sql.DataFrame:
+        """
+        Method to convert a Pandas DataFrame to a Spark DataFrame
+        Args:
+            pandas_df: Pandas DataFrame
+            schema: Spark DataFrame schema, expecting a StructType object
+        Returns:
+            Spark DataFrame
+        """
+        
+        # Convert Pandas DataFrame to Spark DataFrame
+        if schema:
+            spark_df = self.spark_session.createDataFrame(pandas_df, schema)
+        else:
+            spark_df = self.spark_session.createDataFrame(pandas_df)
+
+        return spark_df
 
     
     def chunk_data(self, df: pd.DataFrame, company_name_col: str, country_name_col: str, city_name_col: str, global_id_col: str = None, batch_size: int = 25) -> List[List[Tuple[str, str, str, str]]]:
