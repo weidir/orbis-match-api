@@ -56,7 +56,7 @@ def main(spark_session: pyspark.sql.SparkSession, path_to_data: str, company_nam
     match_criteria_tup_list = orbis_match_api_query_client.format_match_query(data_chunks_list=data_chunks_list)
 
     # Hit the Orbis Match API with the input data with multiple threads, each with a batch of companies
-    match_criteria_tup_list = match_criteria_tup_list[0:5]
+    match_criteria_tup_list = match_criteria_tup_list[5000:]
     futures_list = orbis_match_api_query_client.make_concurrent_orbis_match_api_batch_calls(data_batch_nest_tup_list=match_criteria_tup_list, orbis_api_key=orbis_api_key, max_concurrency=max_concurrency)
     
     # Unpack the data returned by the Orbis API, convert to a Pandas DataFrame
@@ -66,9 +66,12 @@ def main(spark_session: pyspark.sql.SparkSession, path_to_data: str, company_nam
     end_time = datetime.now()
 
     # Print the time taken to run the function
-    print(f"Time taken to run the function: {end_time - start_time}")
+    print(f"Time taken to run the function: {end_time - start_time}\n")
 
-    # Write the data to S3 in parquet format
+    # Check the score of the results
+    orbis_match_api_query_client.score_results(results_df=all_matches_df, score_column_name="Score", check_top_n_results_list=[1, 5])
+
+    # Write the data to the desination file path
     orbis_match_api_query_client.write_data_pandas_csv(pandas_df=all_matches_df, path_to_write=f"results/orbis_match_api_results_{end_time.date()}_T_{end_time.time()}.csv")
     
     return all_matches_df

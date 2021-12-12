@@ -394,3 +394,28 @@ class OrbisMatchAPIQueryClient():
             
         return all_matches_df
 
+
+    def score_results(self, results_df: pd.DataFrame, score_column_name: str, global_id_column_name: str = "global_id", check_top_n_results_list: list = [1]) -> None:
+        """
+        Method that scores the results of the Orbis Match API call
+        Args:
+            results_df: Pandas DataFrame containing the results of the Orbis Match API call
+            score_column_name: name of the column in the results DataFrame that contains the score of the match
+            global_id_column_name: name of the column in the results DataFrame that contains the company global ID
+            check_top_n_results: list with integers corresponding to the number of top results to check for a match (e.g., 1 = check top result, 2 = check top 2 results, defaults to [1])
+        Returns:
+            None
+        """
+
+        # Check the number of unique global IDs in the results
+        global_id_result_cnt = results_df[global_id_column_name].unique().shape[0]
+        print(f"Number of unique global ID values in the results: {global_id_result_cnt:,}")
+
+        # For each value in the list 'check_top_n_results', filter down to only the top n results for each global_id
+        for top_n_result in check_top_n_results_list:
+            all_matches_topn_df = results_df.groupby(global_id_column_name).apply(lambda x: x.nlargest(top_n_result, score_column_name)).reset_index(drop=True)
+
+            # Check the accuracy of the top result and the top five results
+            print(f"Percent match in top {top_n_result} result(s): {(all_matches_topn_df[all_matches_topn_df[global_id_column_name] == all_matches_topn_df['BvDId']].shape[0] / global_id_result_cnt) * 100:.2f}%")
+
+        return None
