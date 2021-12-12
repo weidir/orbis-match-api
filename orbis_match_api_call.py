@@ -3,6 +3,7 @@
 import pandas as pd
 import pyspark
 from typing import List, Dict, Tuple, Any
+from datetime import datetime
 
 # Import the OrbisMatchAPIQueryClient class
 from src.utils import OrbisMatchAPIQueryClient
@@ -36,6 +37,9 @@ def main(spark_session: pyspark.sql.SparkSession, path_to_data: str, company_nam
     if batch_size > 10:
         print(f"CAUTION: The Orbis API tends to fail if batch size is set higher than 10, currently set to {batch_size:,}")
 
+    # Start timing the function
+    start_time = datetime.now()
+
     # Create an instance of the OrbisMatchAPIQueryClient class
     orbis_match_api_query_client = OrbisMatchAPIQueryClient(spark_session=spark, api_key=orbis_api_key)
     
@@ -52,16 +56,26 @@ def main(spark_session: pyspark.sql.SparkSession, path_to_data: str, company_nam
     match_criteria_tup_list = orbis_match_api_query_client.format_match_query(data_chunks_list=data_chunks_list)
 
     # Hit the Orbis Match API with the input data with multiple threads, each with a batch of companies
-    match_criteria_tup_list = match_criteria_tup_list[0:500]
+    match_criteria_tup_list = match_criteria_tup_list[0:5]
     futures_list = orbis_match_api_query_client.make_concurrent_orbis_match_api_batch_calls(data_batch_nest_tup_list=match_criteria_tup_list, orbis_api_key=orbis_api_key, max_concurrency=max_concurrency)
     
     # Unpack the data returned by the Orbis API, convert to a Pandas DataFrame
     all_matches_df = orbis_match_api_query_client.unpack_futures_orbis_api_results(futures_list=futures_list)
+
+    # Stop timing the function
+    end_time = datetime.now()
+
+    # Print the time taken to run the function
+    print(f"Time taken to run the function: {end_time - start_time}")
+
+    # Write the data to S3 in parquet format
+    orbis_match_api_query_client.write_data_pandas_csv(pandas_df=all_matches_df, path_to_write=f"results/orbis_match_api_results_{end_time.date()}_T_{end_time.time()}.csv")
     
     return all_matches_df
 
 
 if __name__ == "__main__":
+
     # Define the path to the input data
     path_to_data = "data/orbis_test_data.csv"
 
@@ -79,8 +93,3 @@ if __name__ == "__main__":
 
     # Call the main function
     all_matches_df = main(spark_session=spark, path_to_data=path_to_data, company_name_col=company_name_col, country_name_col=country_name_col, city_name_col=city_name_col, orbis_api_key=orbis_api_key, global_id_col=global_id_col, batch_size=batch_size, max_concurrency=max_concurrency)
-
-    # Print the results
-    print(all_matches_df.head())
-
-
