@@ -56,7 +56,6 @@ def main(spark_session: pyspark.sql.SparkSession, path_to_data: str, company_nam
     match_criteria_tup_list = orbis_match_api_query_client.format_match_query(data_chunks_list=data_chunks_list)
 
     # Hit the Orbis Match API with the input data with multiple threads, each with a batch of companies
-    match_criteria_tup_list = match_criteria_tup_list[5000:]
     futures_list = orbis_match_api_query_client.make_concurrent_orbis_match_api_batch_calls(data_batch_nest_tup_list=match_criteria_tup_list, orbis_api_key=orbis_api_key, max_concurrency=max_concurrency)
     
     # Unpack the data returned by the Orbis API, convert to a Pandas DataFrame
